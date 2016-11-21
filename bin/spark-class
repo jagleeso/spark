@@ -94,4 +94,21 @@ if [ $LAUNCHER_EXIT_CODE != 0 ]; then
 fi
 
 CMD=("${CMD[@]:0:$LAST}")
+
+if [ "$BENCH_ENABLE" = 'yes' ]; then
+    CMD=( \
+        "amplxe-cl" \
+        "-collect" \
+        "general-exploration" \
+        "${CMD[@]}")
+fi
+
+echo "> BENCH_ENABLE = $BENCH_ENABLE"
+echo "> spark-class args = $@"
+echo "> SPARK JAVA CMD = ${CMD[@]}"
+echo "> CWD OF CMD = $(pwd)"
+echo "> USER = $(whoami)"
+echo "> 'which amplxe-cl' = $(which amplxe-cl)"
+echo "> PATH = $PATH"
+
 exec "${CMD[@]}"

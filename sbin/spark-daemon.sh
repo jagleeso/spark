@@ -29,6 +29,10 @@
 #   SPARK_NICENESS The scheduling priority for daemons. Defaults to 0.
 ##
 
+
+export PS4='Line ${LINENO}: '
+set -x
+
 usage="Usage: spark-daemon.sh [--config <conf-dir>] (start|stop|submit|status) <spark-command> <spark-instance-number> <args...>"
 
 # if no args specified, show usage
@@ -146,6 +150,7 @@ run_command() {
 
   case "$mode" in
     (class)
+      echo "log == $log"
       nohup nice -n "$SPARK_NICENESS" "${SPARK_HOME}"/bin/spark-class $command "$@" >> "$log" 2>&1 < /dev/null &
       newpid="$!"
       ;;
