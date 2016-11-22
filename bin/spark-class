@@ -95,7 +95,9 @@ fi
 
 CMD=("${CMD[@]:0:$LAST}")
 
-if [ "$BENCH_ENABLE" = 'yes' ]; then
+KLASS="$1"
+if [[ "$BENCH_ENABLE" = 'yes' ]] && [[ "$KLASS" =~ \.Worker$ ]]; then
+      
     CMD=( \
         "amplxe-cl" \
         "-collect" \

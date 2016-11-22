@@ -30,8 +30,8 @@
 ##
 
 
-export PS4='Line ${LINENO}: '
-set -x
+# export PS4='Line ${LINENO}: '
+# set -x
 
 usage="Usage: spark-daemon.sh [--config <conf-dir>] (start|stop|submit|status) <spark-command> <spark-instance-number> <args...>"
 
@@ -121,6 +121,8 @@ fi
 log="$SPARK_LOG_DIR/spark-$SPARK_IDENT_STRING-$command-$instance-$HOSTNAME.out"
 pid="$SPARK_PID_DIR/spark-$SPARK_IDENT_STRING-$command-$instance.pid"
 
+echo "> pid file = $pid"
+
 # Set default scheduling priority
 if [ "$SPARK_NICENESS" = "" ]; then
     export SPARK_NICENESS=0
@@ -153,6 +155,22 @@ run_command() {
       echo "log == $log"
       nohup nice -n "$SPARK_NICENESS" "${SPARK_HOME}"/bin/spark-class $command "$@" >> "$log" 2>&1 < /dev/null &
       newpid="$!"
+      if [[ "$BENCH_ENABLE" = 'yes' ]] && [[ "$command" =~ \.Worker$ ]]; then
+          # TODO: if BENCH_ENABLE, then grep for amplxe-cl + the command name... for some reason it appears that the exec-d 
+          # process is forking into a new process...
+          echo "> Wait 5 seconds for amplxe-cl to fork off the Worker process..."
+          sleep 5
+          oldpid="$newpid"
+          ps_grep() {
+              ps aux | grep 'Worker' | grep -v 'amplxe-cl\|spark-daemon\.sh' | grep -v grep
+          }
+          echo "> grepping for Worker..."
+          ps_grep
+          echo
+          newpid=$(ps_grep | awk '{print $2}')
+          echo "> oldpid for \"$command\" = $oldpid"
+          echo "> newpid for \"$command\" = $newpid"
+      fi
       ;;
 
     (submit)
@@ -198,9 +216,11 @@ case $option in
 
   (stop)
 
+    # set -x
     if [ -f $pid ]; then
       TARGET_ID="$(cat "$pid")"
-      if [[ $(ps -p "$TARGET_ID" -o comm=) =~ "java" ]]; then
+      APP_NAME="$(ps -p "$TARGET_ID" -o comm=)"
+      if [[ "$APP_NAME" =~ "java" ]] || ( [[ "$BENCH_ENABLE" = "yes" ]] && [[ "$APP_NAME" =~ "amplxe-cl" ]] ); then
         echo "stopping $command"
         kill "$TARGET_ID" && rm -f "$pid"
       else
