@@ -689,6 +689,7 @@ private[deploy] object Worker extends Logging {
 
   def main(argStrings: Array[String]) {
     Utils.initDaemon(log)
+    log.info("HELLO WORLD FROM SPARK (recompiled)")
     val conf = new SparkConf
     val args = new WorkerArguments(argStrings, conf)
     val rpcEnv = startRpcEnvAndEndpoint(args.host, args.port, args.webUiPort, args.cores,

@@ -162,12 +162,14 @@ run_command() {
           sleep 5
           oldpid="$newpid"
           ps_grep() {
-              ps aux | grep 'Worker' | grep -v 'amplxe-cl\|spark-daemon\.sh' | grep -v grep
+              jps | grep Worker
+              # ps aux | grep 'Worker' | grep -v 'amplxe-cl\|spark-daemon\.sh' | grep -v grep
           }
           echo "> grepping for Worker..."
           ps_grep
           echo
-          newpid=$(ps_grep | awk '{print $2}')
+          # newpid=$(ps_grep | awk '{print $2}')
+          newpid=$(ps_grep | awk '{print $1}')
           echo "> oldpid for \"$command\" = $oldpid"
           echo "> newpid for \"$command\" = $newpid"
       fi
