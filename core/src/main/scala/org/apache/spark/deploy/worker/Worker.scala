@@ -24,10 +24,15 @@ import java.util.{Date, UUID}
 import java.util.concurrent._
 import java.util.concurrent.{Future => JFuture, ScheduledFuture => JScheduledFuture}
 
+import java.util.concurrent.TimeUnit
+
 import scala.collection.mutable.{HashMap, HashSet, LinkedHashMap}
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Random, Success}
 import scala.util.control.NonFatal
+
+import java.nio.file.Files
+import java.nio.file.FileSystems
 
 import org.apache.spark.{SecurityManager, SparkConf}
 import org.apache.spark.deploy.{Command, ExecutorDescription, ExecutorState}
@@ -391,6 +396,27 @@ private[deploy] class Worker(
     }
   }
 
+  // Useful for setting a temp breakpoint... too bad jdb is awful and you cannot step using it ("this is a read-only vm 
+  // connection"...)
+  private def bp(): Unit = {
+      val bpPath = FileSystems.getDefault().getPath(sys.env.get("SPARK_HOME").getOrElse("."), "breakpoint.txt")
+      var bpContents = ""
+      if (Files.exists(bpPath)) {
+        bpContents = new String(Files.readAllBytes(bpPath));
+        logInfo(s"> bpContents = ${bpContents}")
+      } else {
+        logInfo(s"> bpContents is empty")
+      }
+      logInfo(s"> indexOf BREAK = ${bpContents.indexOf("BREAK")}, bpContents = ${bpContents}")
+      if (bpContents.indexOf("BREAK") != -1) {
+        logInfo("BREAKPOINT")
+        while (bpContents.indexOf("BREAK") != -1) {
+          TimeUnit.SECONDS.sleep(2)
+          bpContents = new String(Files.readAllBytes(bpPath));
+        }
+      }
+  }
+
   override def receive: PartialFunction[Any, Unit] = synchronized {
     case SendHeartbeat =>
       if (connected) { sendToMaster(Heartbeat(workerId, self)) }
@@ -458,6 +484,25 @@ private[deploy] class Worker(
               appDir.getAbsolutePath()
             }.toSeq)
           appDirectories(appId) = appLocalDirs
+
+          logInfo(s"> ${appDesc.command.mainClass}\n" +
+            s"appDesc.command.mainClass = ${appDesc.command.mainClass}\n" +
+            s"appDesc.command.mainClass = ${appDesc.command.mainClass}\n" +
+            s"appDesc.command.arguments = ${appDesc.command.arguments}\n" +
+            s"appDesc.command.environment = ${appDesc.command.environment}\n" +
+            s"appDesc.command.classPathEntries = ${appDesc.command.classPathEntries}\n" +
+            s"appDesc.command.libraryPathEntries = ${appDesc.command.libraryPathEntries}\n" +
+            s"appDesc.command.javaOpts = ${appDesc.command.javaOpts}")
+
+          // @volatile var blah = true
+          // while (blah) {
+          //   logWarning("POTATO WARNING")
+          //   logInfo("POTATO INFO")
+          //   TimeUnit.SECONDS.sleep(5)
+          // }
+
+          // bp();
+
           val manager = new ExecutorRunner(
             appId,
             execId,

@@ -96,7 +96,7 @@ fi
 CMD=("${CMD[@]:0:$LAST}")
 
 KLASS="$1"
-if [[ "$BENCH_ENABLE" = 'yes' ]] && [[ "$KLASS" =~ \.Worker$ ]]; then
+if [[ "$BENCH_ENABLE" = 'yes' ]] && [[ "$BENCH_TARGET" = 'Worker' ]] && [[ "$KLASS" =~ \.Worker$ ]]; then
       
     CMD=( \
         "amplxe-cl" \
@@ -106,6 +106,7 @@ if [[ "$BENCH_ENABLE" = 'yes' ]] && [[ "$KLASS" =~ \.Worker$ ]]; then
 fi
 
 echo "> BENCH_ENABLE = $BENCH_ENABLE"
+echo "> BENCH_TAGET = $BENCH_TARGET"
 echo "> spark-class args = $@"
 echo "> SPARK JAVA CMD = ${CMD[@]}"
 echo "> CWD OF CMD = $(pwd)"

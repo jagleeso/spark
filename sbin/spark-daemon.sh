@@ -155,7 +155,7 @@ run_command() {
       echo "log == $log"
       nohup nice -n "$SPARK_NICENESS" "${SPARK_HOME}"/bin/spark-class $command "$@" >> "$log" 2>&1 < /dev/null &
       newpid="$!"
-      if [[ "$BENCH_ENABLE" = 'yes' ]] && [[ "$command" =~ \.Worker$ ]]; then
+      if [[ "$BENCH_ENABLE" = 'yes' ]] && [[ "$BENCH_TARGET" = 'Worker' ]] && [[ "$command" =~ \.Worker$ ]]; then
           # TODO: if BENCH_ENABLE, then grep for amplxe-cl + the command name... for some reason it appears that the exec-d 
           # process is forking into a new process...
           echo "> Wait 5 seconds for amplxe-cl to fork off the Worker process..."

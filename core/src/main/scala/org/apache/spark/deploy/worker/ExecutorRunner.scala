@@ -19,11 +19,10 @@ package org.apache.spark.deploy.worker
 
 import java.io._
 import java.nio.charset.StandardCharsets
+import java.nio.file.Paths
 
 import scala.collection.JavaConverters._
-
 import com.google.common.io.Files
-
 import org.apache.spark.{SecurityManager, SparkConf}
 import org.apache.spark.deploy.{ApplicationDescription, ExecutorState}
 import org.apache.spark.deploy.DeployMessages.ExecutorStateChanged
@@ -160,7 +159,13 @@ private[deploy] class ExecutorRunner(
       builder.environment.put("SPARK_LOG_URL_STDERR", s"${baseUrl}stderr")
       builder.environment.put("SPARK_LOG_URL_STDOUT", s"${baseUrl}stdout")
 
+      builder.command().add(0, Paths.get(
+        sys.env.get("SPARK_HOME").getOrElse("."),
+        "sbin",
+        "start-coarse-grained-executor-backend.sh").toString())
+
       process = builder.start()
+
       val header = "Spark Executor Command: %s\n%s\n\n".format(
         formattedCommand, "=" * 40)
 
