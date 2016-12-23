@@ -31,7 +31,9 @@
 
 
 # export PS4='Line ${LINENO}: '
-# set -x
+set -x
+
+echo "$(date) :: HELLO WORLD" > $HOME/blaz.txt
 
 usage="Usage: spark-daemon.sh [--config <conf-dir>] (start|stop|submit|status) <spark-command> <spark-instance-number> <args...>"
 
@@ -128,6 +130,35 @@ if [ "$SPARK_NICENESS" = "" ]; then
     export SPARK_NICENESS=0
 fi
 
+JPS_PID=
+get_pid_from_jps_for() {
+  local oldpid="$1"
+  local name="$2"
+  shift 1
+  # TODO: if BENCH_ENABLE, then grep for amplxe-cl + the command name... for some reason it appears that the exec-d 
+  # process is forking into a new process...
+  echo "> Wait 5 seconds for amplxe-cl to fork off the $name process..."
+  sleep 5
+  oldpid="$newpid"
+  ps_grep() {
+      jps | grep $name 
+      # ps aux | grep 'Worker' | grep -v 'amplxe-cl\|spark-daemon\.sh' | grep -v grep
+  }
+  echo "> grepping for $name..."
+  ps_grep
+  echo
+  # newpid=$(ps_grep | awk '{print $2}')
+  JPS_PID=$(ps_grep | awk '{print $1}')
+  echo "> oldpid for \"$command\" = $oldpid"
+  echo "> newpid for \"$command\" = $JPS_PID"
+}
+target_match() {
+  local target="$1"
+  local jps_name="$2"
+  shift 1
+  [[ "$target" = "$jps_name" ]] && [[ "$command" =~ \.${jps_name}$ ]]
+}
+
 run_command() {
   mode="$1"
   shift
@@ -155,23 +186,19 @@ run_command() {
       echo "log == $log"
       nohup nice -n "$SPARK_NICENESS" "${SPARK_HOME}"/bin/spark-class $command "$@" >> "$log" 2>&1 < /dev/null &
       newpid="$!"
-      if [[ "$BENCH_ENABLE" = 'yes' ]] && [[ "$BENCH_TARGET" = 'Worker' ]] && [[ "$command" =~ \.Worker$ ]]; then
-          # TODO: if BENCH_ENABLE, then grep for amplxe-cl + the command name... for some reason it appears that the exec-d 
-          # process is forking into a new process...
-          echo "> Wait 5 seconds for amplxe-cl to fork off the Worker process..."
-          sleep 5
-          oldpid="$newpid"
-          ps_grep() {
-              jps | grep Worker
-              # ps aux | grep 'Worker' | grep -v 'amplxe-cl\|spark-daemon\.sh' | grep -v grep
-          }
-          echo "> grepping for Worker..."
-          ps_grep
-          echo
-          # newpid=$(ps_grep | awk '{print $2}')
-          newpid=$(ps_grep | awk '{print $1}')
-          echo "> oldpid for \"$command\" = $oldpid"
-          echo "> newpid for \"$command\" = $newpid"
+      # if [[ "$BENCH_STRACE" = 'yes' ]]; then
+      #     if target_match "$BENCH_TARGET" Worker; then
+      #         get_pid_from_jps_for $newpid Worker
+      #         newpid=$JPS_PID
+      #     elif target_match "$BENCH_TARGET" Master; then
+      #         get_pid_from_jps_for $newpid Master 
+      #         newpid=$JPS_PID
+      #     fi
+      if [[ "$BENCH_ENABLE" = 'yes' ]]; then
+          if target_match "$BENCH_TARGET" Worker; then
+              get_pid_from_jps_for $newpid Worker
+              newpid=$JPS_PID
+          fi
       fi
       ;;
 
@@ -222,7 +249,8 @@ case $option in
     if [ -f $pid ]; then
       TARGET_ID="$(cat "$pid")"
       APP_NAME="$(ps -p "$TARGET_ID" -o comm=)"
-      if [[ "$APP_NAME" =~ "java" ]] || ( [[ "$BENCH_ENABLE" = "yes" ]] && [[ "$APP_NAME" =~ "amplxe-cl" ]] ); then
+      if [[ "$APP_NAME" =~ "java" ]] || ( [[ "$BENCH_ENABLE" = "yes" ]] && [[ "$APP_NAME" =~ "amplxe-cl" ]] ) || \
+          ( [[ "$BENCH_STRACE" = "yes" ]] && [[ "$APP_NAME" =~ "strace" ]] ); then
         echo "stopping $command"
         kill "$TARGET_ID" && rm -f "$pid"
       else
