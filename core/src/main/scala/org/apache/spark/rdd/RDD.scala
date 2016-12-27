@@ -84,55 +84,69 @@ abstract class RDD[T: ClassTag](
     logWarning("Spark does not support nested RDDs (see SPARK-5063)")
   }
 
+
   private def sc: SparkContext = {
     if (_sc == null) {
       throw new SparkException(
         "This RDD lacks a SparkContext. It could happen in the following cases: \n(1) RDD " +
-        "transformations and actions are NOT invoked by the driver, but inside of other " +
-        "transformations; for example, rdd1.map(x => rdd2.values.count() * x) is invalid " +
-        "because the values transformation and count action cannot be performed inside of the " +
-        "rdd1.map transformation. For more information, see SPARK-5063.\n(2) When a Spark " +
-        "Streaming job recovers from checkpoint, this exception will be hit if a reference to " +
-        "an RDD not defined by the streaming job is used in DStream operations. For more " +
-        "information, See SPARK-13758.")
+          "transformations and actions are NOT invoked by the driver, but inside of other " +
+          "transformations; for example, rdd1.map(x => rdd2.values.count() * x) is invalid " +
+          "because the values transformation and count action cannot be performed inside of the " +
+          "rdd1.map transformation. For more information, see SPARK-5063.\n(2) When a Spark " +
+          "Streaming job recovers from checkpoint, this exception will be hit if a reference to " +
+          "an RDD not defined by the streaming job is used in DStream operations. For more " +
+          "information, See SPARK-13758.")
     }
     _sc
   }
 
   /** Construct an RDD with just a one-to-one dependency on one parent */
   def this(@transient oneParent: RDD[_]) =
-    this(oneParent.context, List(new OneToOneDependency(oneParent)))
+  this(oneParent.context, List(new OneToOneDependency(oneParent)))
 
   private[spark] def conf = sc.conf
+
+  val storageLevelName = conf.get("spark.storage.default", "MEMORY_ONLY")
+  val defaultStorage = storageLevelName match {
+    case "MEMORY_ONLY" => StorageLevel.MEMORY_ONLY
+    case "MEMORY_AND_DISK" => StorageLevel.MEMORY_AND_DISK
+    case "MEMORY_ONLY_SER" => StorageLevel.MEMORY_ONLY_SER
+    case "MEMORY_AND_DISK_SER" => StorageLevel.MEMORY_AND_DISK_SER
+    case "DISK_ONLY" => StorageLevel.DISK_ONLY
+    case "OFF_HEAP" => StorageLevel.OFF_HEAP
+    case default => StorageLevel.MEMORY_ONLY
+  }
+  logInfo(s"DEFAULT STORAGE :: storageLevelName == ${storageLevelName}, defaultStorage = ${defaultStorage}")
+
   // =======================================================================
   // Methods that should be implemented by subclasses of RDD
   // =======================================================================
 
   /**
-   * :: DeveloperApi ::
-   * Implemented by subclasses to compute a given partition.
-   */
+    * :: DeveloperApi ::
+    * Implemented by subclasses to compute a given partition.
+    */
   @DeveloperApi
   def compute(split: Partition, context: TaskContext): Iterator[T]
 
   /**
-   * Implemented by subclasses to return the set of partitions in this RDD. This method will only
-   * be called once, so it is safe to implement a time-consuming computation in it.
-   *
-   * The partitions in this array must satisfy the following property:
-   *   `rdd.partitions.zipWithIndex.forall { case (partition, index) => partition.index == index }`
-   */
+    * Implemented by subclasses to return the set of partitions in this RDD. This method will only
+    * be called once, so it is safe to implement a time-consuming computation in it.
+    *
+    * The partitions in this array must satisfy the following property:
+    * `rdd.partitions.zipWithIndex.forall { case (partition, index) => partition.index == index }`
+    */
   protected def getPartitions: Array[Partition]
 
   /**
-   * Implemented by subclasses to return how this RDD depends on parent RDDs. This method will only
-   * be called once, so it is safe to implement a time-consuming computation in it.
-   */
+    * Implemented by subclasses to return how this RDD depends on parent RDDs. This method will only
+    * be called once, so it is safe to implement a time-consuming computation in it.
+    */
   protected def getDependencies: Seq[Dependency[_]] = deps
 
   /**
-   * Optionally overridden by subclasses to specify placement preferences.
-   */
+    * Optionally overridden by subclasses to specify placement preferences.
+    */
   protected def getPreferredLocations(split: Partition): Seq[String] = Nil
 
   /** Optionally overridden by subclasses to specify how they are partitioned. */
@@ -158,11 +172,11 @@ abstract class RDD[T: ClassTag](
   }
 
   /**
-   * Mark this RDD for persisting using the specified level.
-   *
-   * @param newLevel the target storage level
-   * @param allowOverride whether to override any existing level with the new one
-   */
+    * Mark this RDD for persisting using the specified level.
+    *
+    * @param newLevel      the target storage level
+    * @param allowOverride whether to override any existing level with the new one
+    */
   private def persist(newLevel: StorageLevel, allowOverride: Boolean): this.type = {
     // TODO: Handle changes of StorageLevel
     if (storageLevel != StorageLevel.NONE && newLevel != storageLevel && !allowOverride) {
@@ -180,10 +194,10 @@ abstract class RDD[T: ClassTag](
   }
 
   /**
-   * Set this RDD's storage level to persist its values across operations after the first time
-   * it is computed. This can only be used to assign a new storage level if the RDD does not
-   * have a storage level set yet. Local checkpointing is an exception.
-   */
+    * Set this RDD's storage level to persist its values across operations after the first time
+    * it is computed. This can only be used to assign a new storage level if the RDD does not
+    * have a storage level set yet. Local checkpointing is an exception.
+    */
   def persist(newLevel: StorageLevel): this.type = {
     if (isLocallyCheckpointed) {
       // This means the user previously called localCheckpoint(), which should have already
@@ -196,7 +210,7 @@ abstract class RDD[T: ClassTag](
   }
 
   /** Persist this RDD with the default storage level (`MEMORY_ONLY`). */
-  def persist(): this.type = persist(StorageLevel.MEMORY_ONLY)
+  def persist(): this.type = persist(defaultStorage)
 
   /** Persist this RDD with the default storage level (`MEMORY_ONLY`). */
   def cache(): this.type = persist()

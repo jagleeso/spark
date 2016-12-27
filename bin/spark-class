@@ -108,13 +108,13 @@ if [[ "$BENCH_ENABLE" = 'yes' ]] && [[ "$BENCH_TARGET" = 'Worker' ]] && [[ "$KLA
         "${CMD[@]}")
 fi
 
-echo "> BENCH_ENABLE = $BENCH_ENABLE"
-echo "> BENCH_TAGET = $BENCH_TARGET"
-echo "> spark-class args = $@"
-echo "> SPARK JAVA CMD = ${CMD[@]}"
-echo "> CWD OF CMD = $(pwd)"
-echo "> USER = $(whoami)"
-echo "> 'which amplxe-cl' = $(which amplxe-cl)"
-echo "> PATH = $PATH"
+# echo "> BENCH_ENABLE = $BENCH_ENABLE"
+# echo "> BENCH_TAGET = $BENCH_TARGET"
+# echo "> spark-class args = $@"
+# echo "> SPARK JAVA CMD = ${CMD[@]}"
+# echo "> CWD OF CMD = $(pwd)"
+# echo "> USER = $(whoami)"
+# echo "> 'which amplxe-cl' = $(which amplxe-cl)"
+# echo "> PATH = $PATH"
 
 exec "${CMD[@]}"

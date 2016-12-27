@@ -31,7 +31,7 @@
 
 
 # export PS4='Line ${LINENO}: '
-set -x
+# set -x
 
 echo "$(date) :: HELLO WORLD" > $HOME/blaz.txt
 
@@ -123,7 +123,7 @@ fi
 log="$SPARK_LOG_DIR/spark-$SPARK_IDENT_STRING-$command-$instance-$HOSTNAME.out"
 pid="$SPARK_PID_DIR/spark-$SPARK_IDENT_STRING-$command-$instance.pid"
 
-echo "> pid file = $pid"
+# echo "> pid file = $pid"
 
 # Set default scheduling priority
 if [ "$SPARK_NICENESS" = "" ]; then
@@ -137,20 +137,20 @@ get_pid_from_jps_for() {
   shift 1
   # TODO: if BENCH_ENABLE, then grep for amplxe-cl + the command name... for some reason it appears that the exec-d 
   # process is forking into a new process...
-  echo "> Wait 5 seconds for amplxe-cl to fork off the $name process..."
+  # echo "> Wait 5 seconds for amplxe-cl to fork off the $name process..."
   sleep 5
   oldpid="$newpid"
   ps_grep() {
       jps | grep $name 
       # ps aux | grep 'Worker' | grep -v 'amplxe-cl\|spark-daemon\.sh' | grep -v grep
   }
-  echo "> grepping for $name..."
-  ps_grep
-  echo
+  # echo "> grepping for $name..."
+  # ps_grep
+  # echo
   # newpid=$(ps_grep | awk '{print $2}')
   JPS_PID=$(ps_grep | awk '{print $1}')
-  echo "> oldpid for \"$command\" = $oldpid"
-  echo "> newpid for \"$command\" = $JPS_PID"
+  # echo "> oldpid for \"$command\" = $oldpid"
+  # echo "> newpid for \"$command\" = $JPS_PID"
 }
 target_match() {
   local target="$1"

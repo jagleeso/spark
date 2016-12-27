@@ -27,11 +27,14 @@ import org.apache.spark.io.CompressionCodec
 import org.apache.spark.storage._
 import org.apache.spark.util.io.{ChunkedByteBuffer, ChunkedByteBufferOutputStream}
 
+import org.apache.spark.internal.Logging
+
 /**
  * Component which configures serialization and compression for various Spark components, including
  * automatic selection of which [[Serializer]] to use for shuffles.
  */
-private[spark] class SerializerManager(defaultSerializer: Serializer, conf: SparkConf) {
+private[spark] class SerializerManager(defaultSerializer: Serializer, conf: SparkConf)
+  extends Logging {
 
   private[this] val kryoSerializer = new KryoSerializer(conf)
 
@@ -102,18 +105,40 @@ private[spark] class SerializerManager(defaultSerializer: Serializer, conf: Spar
     }
   }
 
+  def getTrace() : String = {
+    val sb = new StringBuffer()
+    for (frame <- Thread.currentThread().getStackTrace()) {
+      sb.append(frame.toString)
+      sb.append("\n")
+    }
+    sb.toString
+  }
+
   /**
    * Wrap an output stream for compression if block compression is enabled for its block type
    */
   def wrapForCompression(blockId: BlockId, s: OutputStream): OutputStream = {
-    if (shouldCompress(blockId)) compressionCodec.compressedOutputStream(s) else s
+    if (shouldCompress(blockId)) {
+      logWarning(s"WRAPPING FOR COMPRESSION ${blockId.name}: ${getTrace()}")
+      compressionCodec.compressedOutputStream(s)
+    } else {
+      logWarning(s"NOT WRAPPING FOR COMPRESSION ${blockId.name}: ${getTrace()}")
+
+      s
+    }
   }
 
   /**
    * Wrap an input stream for compression if block compression is enabled for its block type
    */
   def wrapForCompression(blockId: BlockId, s: InputStream): InputStream = {
-    if (shouldCompress(blockId)) compressionCodec.compressedInputStream(s) else s
+    if (shouldCompress(blockId)) {
+      logWarning(s"WRAPPING FOR COMPRESSION ${blockId.name}: ${getTrace()}")
+      compressionCodec.compressedInputStream(s)
+    } else  {
+      logWarning(s"NOT WRAPPING FOR COMPRESSION ${blockId.name}: ${getTrace()}")
+      s
+    }
   }
 
   /** Serializes into a stream. */
